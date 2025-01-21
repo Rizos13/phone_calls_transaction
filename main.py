@@ -4,9 +4,15 @@ from psycopg2 import IntegrityError
 import os
 from dotenv import load_dotenv
 from datetime import date
+from queries import(
+    INSERT_CONTACT_QUERY,
+    DELETE_CONTACT_QUERY,
+    VIEW_CONTACTS_QUERY,
+    INSERT_CALL_QUERY,
+    VIEW_CALL_HISTORY_QUERY
+)
 
 load_dotenv()
-
 app = FastAPI()
 
 conn=None
@@ -17,10 +23,7 @@ class ContactList:
     def add_contact(self, name: str, phone_nr: str):
         try:
             with self.conn.cursor() as cur:
-                cur.execute("""
-                INSERT INTO contact_list (phone_nr, contact_name) 
-                VALUES (%s, %s);
-                """, (phone_nr, name))
+                cur.execute(INSERT_CONTACT_QUERY, (phone_nr, name))
             self.conn.commit()
             print(f"Contact - {name} and phone_number - {phone_nr} added successfully!")
             return{"phone_nr": phone_nr, "contact_name": name}
@@ -37,11 +40,7 @@ class ContactList:
     def del_contact(self,phone_nr):
         try:
             with self.conn.cursor() as cur:
-                cur.execute("""
-                DELETE FROM contact_list
-                WHERE phone_nr = %s
-                RETURNING contact_name;
-                """, (phone_nr,))
+                cur.execute(DELETE_CONTACT_QUERY, (phone_nr,))
                 result = cur.fetchone()
             if result:
                 self.conn.commit()
@@ -64,11 +63,7 @@ class ContactList:
     def view_contacts(self):
         try:
             with self.conn.cursor() as cur:
-                cur.execute (""" 
-                SELECT phone_nr,contact_name
-                FROM contact_list
-                ORDER BY contact_name ASC;
-                """)
+                cur.execute (VIEW_CONTACTS_QUERY)
                 contacts = cur.fetchall()
             contact_list = [{"phone_nr": row[0], "contact_name": row[1]} for row in contacts]
             print(f"Contact list - {contact_list}!")
@@ -83,11 +78,7 @@ class CallHistory:
     def add_call(self, phone_nr: str, date: date,hour: int,minute: int,duration_seconds: int):
         try:
             with self.conn.cursor() as cur:
-                cur.execute ("""
-                INSERT INTO call_history (phone_nr, date, hour, minute, duration_seconds)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING call_id;
-                """, (phone_nr, date, hour, minute, duration_seconds))
+                cur.execute (INSERT_CALL_QUERY, (phone_nr, date, hour, minute, duration_seconds))
                 call_id = cur.fetchone()[0]
             self.conn.commit()
             print(f"Call with ID {call_id} added!")
@@ -114,18 +105,11 @@ class CallHistory:
         try:
             with self.conn.cursor() as cur:
                 if phone_nr:
-                    cur.execute ("""
-                    SELECT call_id, phone_nr, date, hour, minute, duration_seconds
-                    FROM call_history
-                    WHERE phone_nr = %s
-                    ORDER BY date DESC, hour DESC, minute DESC;
-                    """, (phone_nr,))
+                    where_clause = "WHERE phone_nr = %s"
+                    cur.execute (VIEW_CALL_HISTORY_QUERY, (phone_nr,))
                 else:
-                    cur.execute("""
-                    SELECT call_id, phone_nr, date, hour, minute, duration_seconds
-                    FROM call_history
-                    ORDER BY date DESC, hour DESC, minute DESC;
-                    """)
+                    where_clause = ""
+                    cur.execute(VIEW_CALL_HISTORY_QUERY.format(where_clause=where_clause))
                 call_history = cur.fetchall()
             call_list = [
                 {
@@ -181,7 +165,7 @@ def shutdown_server():
       global conn, phone_call_manager
       if phone_call_manager:
           phone_call_manager.close_connection()
-          print("Close db connection")
+          print("Close db connection.")
 
 @app.get("/ping")
 def ping():
