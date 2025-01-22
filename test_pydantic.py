@@ -1,5 +1,3 @@
-# test_pydantic.py
-
 from pydantic import BaseModel, Field, validator
 from datetime import date
 import re
