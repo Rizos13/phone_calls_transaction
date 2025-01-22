@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
+from typing import Optional, List
 import psycopg2
 from psycopg2 import IntegrityError
 import os
-from dotenv import load_dotenv
 from datetime import date
 from queries import(
     INSERT_CONTACT_QUERY,
@@ -11,9 +11,12 @@ from queries import(
     INSERT_CALL_QUERY,
     VIEW_CALL_HISTORY_QUERY
 )
-
-load_dotenv()
-app = FastAPI()
+from schemas import ContactCreate, Contact, CallCreate, Call
+app = FastAPI(
+    title="Phone Call Manager API",
+    description="API for managing contacts and call history.",
+    version="1.0.0"
+)
 
 conn=None
 
@@ -24,7 +27,6 @@ class ContactList:
         try:
             with self.conn.cursor() as cur:
                 cur.execute(INSERT_CONTACT_QUERY, (phone_nr, name))
-            self.conn.commit()
             print(f"Contact - {name} and phone_number - {phone_nr} added successfully!")
             return{"phone_nr": phone_nr, "contact_name": name}
         except IntegrityError:
@@ -37,7 +39,7 @@ class ContactList:
             error_msg = f"Error adding a contact {e}"
             print(error_msg)
             raise HTTPException(status_code=500, detail=error_msg)
-    def del_contact(self,phone_nr):
+    def del_contact(self,phone_nr: str):
         try:
             with self.conn.cursor() as cur:
                 cur.execute(DELETE_CONTACT_QUERY, (phone_nr,))
@@ -78,7 +80,7 @@ class CallHistory:
     def add_call(self, phone_nr: str, date: date,hour: int,minute: int,duration_seconds: int):
         try:
             with self.conn.cursor() as cur:
-                cur.execute (INSERT_CALL_QUERY, (phone_nr, date, hour, minute, duration_seconds))
+                cur.execute(INSERT_CALL_QUERY, (phone_nr, date, hour, minute, duration_seconds))
                 call_id = cur.fetchone()[0]
             self.conn.commit()
             print(f"Call with ID {call_id} added!")
@@ -101,21 +103,23 @@ class CallHistory:
             print(error_msg)
             raise HTTPException(status_code=500, detail=error_msg)
 
-    def view_call_history(self, phone_nr=None):
+    def view_call_history(self, phone_nr: Optional[str] = None):
         try:
             with self.conn.cursor() as cur:
                 if phone_nr:
                     where_clause = "WHERE phone_nr = %s"
-                    cur.execute (VIEW_CALL_HISTORY_QUERY, (phone_nr,))
+                    query = VIEW_CALL_HISTORY_QUERY.replace("{where_clause}", where_clause)
+                    cur.execute(query, (phone_nr,))
                 else:
                     where_clause = ""
-                    cur.execute(VIEW_CALL_HISTORY_QUERY.format(where_clause=where_clause))
+                    query = VIEW_CALL_HISTORY_QUERY.replace("{where_clause}", where_clause)
+                    cur.execute(query)
                 call_history = cur.fetchall()
             call_list = [
                 {
                     "call_id": row[0],
                     "phone_nr": row[1],
-                    "date": row[2].isoformat() if isinstance(row[2], date) else row[2],
+                    "date": row[2],
                     "hour": row[3],
                     "minute": row[4],
                     "duration_seconds": row[5]
@@ -167,7 +171,7 @@ def shutdown_server():
           phone_call_manager.close_connection()
           print("Close db connection.")
 
-@app.get("/ping")
+@app.get("/ping", summary="Check server status.")
 def ping():
     return {"message": "server work!"}
 
@@ -185,3 +189,44 @@ def get_db_version():
         return {"version": db_version[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/contacts", response_model=Contact, status_code=201, summary="Add a new contact. ")
+def add_contact(contact: ContactCreate):
+    global phone_call_manager
+    if phone_call_manager is None:
+        raise HTTPException(status_code=500, detail="Connection error!")
+    return phone_call_manager.contacts.add_contact(contact.contact_name, contact.phone_nr)
+
+@app.delete("/contacts/{phone_nr}", response_model=Contact, summary="Delete contact by phone number.")
+def delete_contact(phone_nr: str):
+    global phone_call_manager
+    if phone_call_manager is None:
+        raise HTTPException(status_code=500, detail="Database connection not established.")
+    return phone_call_manager.contacts.del_contact(phone_nr)
+
+@app.get("/contacts", response_model=List[Contact], summary="View list of contacts.")
+def view_contacts():
+    global phone_call_manager
+    if phone_call_manager is None:
+        raise HTTPException(status_code=500, detail="Database connection not established.")
+    return phone_call_manager.contacts.view_contacts()
+
+@app.post("/calls", response_model=Call, status_code=201, summary="Add a call record.")
+def add_call(call: CallCreate):
+    global phone_call_manager
+    if phone_call_manager is None:
+        raise HTTPException(status_code=500, detail="Database connection not established.")
+    return phone_call_manager.call_history.add_call(
+        phone_nr=call.phone_nr,
+        date=call.date,
+        hour=call.hour,
+        minute=call.minute,
+        duration_seconds=call.duration_seconds
+    )
+
+@app.get("/calls", response_model=List[Call], summary="View list of calls.")
+def view_all_history(phone_nr: Optional[str] = None):
+    global phone_call_manager
+    if phone_call_manager is None:
+        raise HTTPException(status_code=500, detail="Database connection not established.")
+    return phone_call_manager.call_history.view_call_history(phone_nr)

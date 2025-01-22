@@ -22,7 +22,8 @@ INSERT_CALL_QUERY = """
 """
 
 VIEW_CALL_HISTORY_QUERY = """
-    SELECT call_id, date, hour, minute, duration_seconds
+    SELECT call_id, phone_nr, date, hour, minute, duration_seconds
     FROM call_history
+    {where_clause}
     ORDER BY date DESC, hour DESC, minute DESC;
 """
