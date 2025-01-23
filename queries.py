@@ -1,11 +1,11 @@
 INSERT_CONTACT_QUERY = """
     INSERT INTO contact_list (phone_nr, contact_name)
-    VALUES (%s, %s);
+    VALUES ($1, $2);
 """
 
 DELETE_CONTACT_QUERY = """
     DELETE FROM contact_list
-    WHERE phone_nr = %s;
+    WHERE phone_nr = $1;
     RETURNING contact_name;
 """
 
@@ -17,7 +17,7 @@ VIEW_CONTACTS_QUERY = """
 
 INSERT_CALL_QUERY = """
     INSERT INTO call_history (phone_nr, date, hour, minute, duration_seconds)
-    VALUES (%s, %s, %s, %s, %s);
+    VALUES ($1, $2, $3, $4, $5);
     RETURNING call_id;
 """
 
