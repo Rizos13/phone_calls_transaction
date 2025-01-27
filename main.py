@@ -1,10 +1,10 @@
-from dotenv import load_dotenv
-load_dotenv()
 from fastapi import FastAPI, HTTPException
 from typing import Optional, List
 import asyncpg
 import os
 from datetime import date
+import logging
+import logger
 from queries import (
     INSERT_CONTACT_QUERY,
     DELETE_CONTACT_QUERY,
@@ -15,11 +15,23 @@ from queries import (
 
 from schemas import ContactCreate, Contact, CallCreate, Call
 
+from dotenv import load_dotenv
+
+load_dotenv()
 app = FastAPI(
     title="Phone Call Manager API",
     description="API for managing contacts and call history.",
     version="1.0.0"
 )
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 class Database:
     def __init__(self):
@@ -36,15 +48,15 @@ class Database:
                 min_size=1,
                 max_size=10
             )
-            print("Database connection pool created.")
+            logger.info("Database connection pool created.")
         except Exception as e:
-            print(f"Error connecting to database: {e}")
+            logger.error(f"Error connecting to database: {e}")
             raise
 
     async def disconnect(self):
         if self.pool:
             await self.pool.close()
-            print("Database connection pool closed.")
+            logger.info("Database connection pool closed.")
 
 db = Database()
 
@@ -56,15 +68,15 @@ class ContactList:
         async with self.pool.acquire() as connection:
             try:
                 await connection.execute(INSERT_CONTACT_QUERY, phone_nr, name)
-                print(f"Contact - {name} and phone_number - {phone_nr} added successfully!")
+                logger.info(f"Contact - {name} and phone_number - {phone_nr} added successfully!")
                 return {"phone_nr": phone_nr, "contact_name": name}
             except asyncpg.exceptions.UniqueViolationError:
                 error_msg = f"A contact with {phone_nr} already exists."
-                print(error_msg)
+                logger.warning(error_msg)
                 raise HTTPException(status_code=400, detail=error_msg)
             except Exception as e:
                 error_msg = f"Error adding a contact: {e}"
-                print(error_msg)
+                logger.info(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
 
     async def del_contact(self, phone_nr: str):
@@ -73,17 +85,17 @@ class ContactList:
                 result = await connection.fetchrow(DELETE_CONTACT_QUERY, phone_nr)
                 if result:
                     name = result['contact_name']
-                    print(f"Contact - {name} and phone_number - {phone_nr} deleted.")
+                    logger.info(f"Contact - {name} and phone_number - {phone_nr} deleted.")
                     return {"phone_nr": phone_nr, "contact_name": name}
                 else:
                     error_msg = f"Contact with phone number {phone_nr} does not exist."
-                    print(error_msg)
+                    logger.warning(error_msg)
                     raise HTTPException(status_code=404, detail=error_msg)
             except HTTPException as he:
                 raise he
             except Exception as e:
                 error_msg = f"Error deleting a contact: {e}"
-                print(error_msg)
+                logger.error(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
 
     async def view_contacts(self):
@@ -91,11 +103,11 @@ class ContactList:
             try:
                 records = await connection.fetch(VIEW_CONTACTS_QUERY)
                 contact_list = [{"phone_nr": record["phone_nr"], "contact_name": record["contact_name"]} for record in records]
-                print(f"Contact list - {contact_list}!")
+                logger.info(f"Contact list - {contact_list}!")
                 return contact_list
             except Exception as e:
                 error_msg = f"Error viewing contact list: {e}."
-                print(error_msg)
+                logger.error(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
 
 class CallHistory:
@@ -109,7 +121,7 @@ class CallHistory:
                     INSERT_CALL_QUERY,
                     phone_nr, call_date, hour, minute, duration_seconds
                 )
-                print(f"Call with ID {call_id} added!")
+                logger.info(f"Call with ID {call_id} added!")
                 return {
                     "call_id": call_id,
                     "phone_nr": phone_nr,
@@ -120,11 +132,11 @@ class CallHistory:
                 }
             except asyncpg.exceptions.UniqueViolationError:
                 error_msg = f"Integrity error when adding call for {phone_nr}."
-                print(error_msg)
+                logger.warning(error_msg)
                 raise HTTPException(status_code=400, detail=error_msg)
             except Exception as e:
                 error_msg = f"Error adding call: {e}."
-                print(error_msg)
+                logger.error(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
 
     async def view_call_history(self, phone_nr: Optional[str] = None):
@@ -147,11 +159,11 @@ class CallHistory:
                     }
                     for record in records
                 ]
-                print(f"Call history - {call_list}")
+                logger.info(f"Call history - {call_list}")
                 return call_list
             except Exception as e:
                 error_msg = f"Error viewing call history: {e}"
-                print(error_msg)
+                logger.error(error_msg)
                 raise HTTPException(status_code=500, detail=error_msg)
 
 class PhoneCallManager:
