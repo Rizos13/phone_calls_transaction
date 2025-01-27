@@ -184,6 +184,10 @@ async def startup_event():
 async def shutdown_event():
     await db.disconnect()
 
+@app.get("/", summary = "Root endpoint.")
+async def root():
+    return {"message": "Welcome to the Phone Calls Manager API. Go to /docs for the API documentation."}
+
 @app.get("/ping", summary="Check server status.")
 async def ping():
     return {"message": "server work!"}
