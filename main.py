@@ -57,6 +57,8 @@ class Database:
                 min_size=1,
                 max_size=10
             )
+            async with self.pool.acquire() as connection:
+                await connection.execute('SET search_path TO public;')
             logger.info("Database connection pool created.")
         except Exception as e:
             logger.error(f"Error connecting to database: {e}")
@@ -91,6 +93,7 @@ class ContactList:
     async def del_contact(self, phone_nr: str):
         async with self.pool.acquire() as connection:
             try:
+                logger.debug(f"Executing DELETE_CONTACT_QUERY with phone_nr={phone_nr}")
                 result = await connection.fetchrow(DELETE_CONTACT_QUERY, phone_nr)
                 if result:
                     name = result['contact_name']
@@ -126,6 +129,7 @@ class CallHistory:
     async def add_call(self, phone_nr: str, call_date: date, hour: int, minute: int, duration_seconds: int):
         async with self.pool.acquire() as connection:
             try:
+                logger.debug(f"Executing INSERT_CALL_QUERY with phone_nr={phone_nr}, call_date={call_date}, hour={hour}, minute={minute}, duration_seconds={duration_seconds}")
                 call_id = await connection.fetchval(
                     INSERT_CALL_QUERY,
                     phone_nr, call_date, hour, minute, duration_seconds
@@ -260,7 +264,7 @@ async def add_contact(
 ):
     try:
         await manager.contacts.add_contact(contact_name, phone_nr)
-        return RedirectResponse(url="/contacts?message=Contact added successfully.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/contacts?message=Contact%20added%20successfully.", status_code=status.HTTP_303_SEE_OTHER)
     except HTTPException as e:
         return RedirectResponse(url=f"/contacts/add?error={e.detail}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -268,7 +272,7 @@ async def add_contact(
 async def delete_contact(phone_nr: str, manager: PhoneCallManager = Depends(get_phone_call_manager)):
     try:
         await manager.contacts.del_contact(phone_nr)
-        return RedirectResponse(url="/contacts?message=Contact deleted successfully.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/contacts?message=Contact%20deleted%20successfully.", status_code=status.HTTP_303_SEE_OTHER)
     except HTTPException as e:
         return RedirectResponse(url=f"/contacts?error={e.detail}", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -301,7 +305,7 @@ async def add_call(
 ):
     try:
         await manager.call_history.add_call(phone_nr, call_date, hour, minute, duration_seconds)
-        return RedirectResponse(url="/calls?message=Call added successfully.", status_code=status.HTTP_303_SEE_OTHER)
+        return RedirectResponse(url="/calls?message=Call%20added%20successfully.", status_code=status.HTTP_303_SEE_OTHER)
     except HTTPException as e:
         return RedirectResponse(url=f"/calls/add?error={e.detail}", status_code=status.HTTP_303_SEE_OTHER)
 

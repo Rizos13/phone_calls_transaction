@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Add New Contact</h2>
+    <form action="/contacts/add" method="post" class="form">
+        <label for="contact_name">Contact Name:</label>
+        <input type="text" id="contact_name" name="contact_name" required>
+
+        <label for="phone_nr">Phone Number:</label>
+        <input type="text" id="phone_nr" name="phone_nr" required pattern="^\+?\d{10,15}$" title="Enter phone number in the format +34655988111">
+
+        <button type="submit" class="btn"><i class="fas fa-check"></i> Add</button>
+    </form>
+    <a href="/contacts" class="btn secondary-btn"><i class="fas fa-arrow-left"></i> Back to Contacts</a>
+{% endblock %}

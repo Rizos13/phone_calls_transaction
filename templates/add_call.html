@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Add New Call</h2>
+    <form action="/calls/add" method="post" class="form">
+        <label for="phone_nr">Phone Number:</label>
+        <input type="text" id="phone_nr" name="phone_nr" required pattern="^\+?\d{10,15}$" title="Enter phone number in the format +34655988111">
+
+        <label for="call_date">Call Date:</label>
+        <input type="date" id="call_date" name="call_date" required>
+
+        <label for="hour">Hour:</label>
+        <input type="number" id="hour" name="hour" min="0" max="23" required>
+
+        <label for="minute">Minute:</label>
+        <input type="number" id="minute" name="minute" min="0" max="59" required>
+
+        <label for="duration_seconds">Duration (sec):</label>
+        <input type="number" id="duration_seconds" name="duration_seconds" min="0" required>
+
+        <button type="submit" class="btn"><i class="fas fa-check"></i> Add</button>
+    </form>
+    <a href="/calls" class="btn secondary-btn"><i class="fas fa-arrow-left"></i> Back to Call History</a>
+{% endblock %}

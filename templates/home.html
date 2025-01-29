@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h2>Welcome to Phone Call Manager</h2>
+    <p>Use the navigation above to manage contacts and call history.</p>
+    <div class="dashboard">
+        <div class="card">
+            <i class="fas fa-address-book"></i>
+            <a href="/contacts">Manage Contacts</a>
+        </div>
+        <div class="card">
+            <i class="fas fa-phone"></i>
+            <a href="/calls">Call History</a>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Phone Call Manager</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" integrity="sha512-Fo3rlrQkTyGLGVG5Xwhe2j2JmB4U6Y3mO5oI2u1M+S/DzH/GhVKaHeFSCcJBG0GnQZ/QJy/NtfXvE1jrV1blhw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+    <nav>
+        <div class="logo">
+            <h1>Phone Call Manager</h1>
+        </div>
+        <ul>
+            <li><a href="/"><i class="fas fa-home"></i> Home</a></li>
+            <li><a href="/contacts"><i class="fas fa-address-book"></i> Contacts</a></li>
+            <li><a href="/calls"><i class="fas fa-phone"></i> Call History</a></li>
+        </ul>
+    </nav>
+    <div class="container">
+        {% if message %}
+            <div class="message">{{ message }}</div>
+        {% endif %}
+        {% if error %}
+            <div class="error">{{ error }}</div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </div>
+    <script src="/static/js/scripts.js"></script>
+</body>
+</html>
